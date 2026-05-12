@@ -1667,11 +1667,10 @@ async function rateOneSub(r, qr, tm){
     '{"params":[{"param":"EXACT PARAM NAME","score":X,"max":Y},...], "feedback":"your feedback here", "totalScore":Z, "maxScore":'+q.m+'}';
 
   try{
-    var resp=await fetch('https://api.openai.com/v1/chat/completions',{
+    var resp=await fetch(PROXY_URL,{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'Authorization':'Bearer '+getOpenAIKey()
       },
       body:JSON.stringify({
         model:'gpt-4o',
@@ -2076,9 +2075,8 @@ window.copyMailBody=function(){
 };
 
 
-// ══ OPENAI KEY (hardcoded) ══
-var _oaiKey = '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';
-function getOpenAIKey(){ return _oaiKey; }
+// ══ PROXY WORKER URL ══
+var PROXY_URL = 'https://long-dew-a308.rajattiwari1340.workers.dev/';
 
 // ══ YOUTUBE LINKS VIA OPENAI ══
 var ytCache = {};
@@ -2118,11 +2116,10 @@ async function fetchLinksForQuestion(qIndex, topic, questionText, solution) {
     '[{"title":"exact video title","channel":"channel name","url":"https://www.youtube.com/watch?v=REAL_ID"}]';
 
   try {
-    var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    var resp = await fetch(PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer '+getOpenAIKey()
       },
       body: JSON.stringify({
         model: 'gpt-4o',
