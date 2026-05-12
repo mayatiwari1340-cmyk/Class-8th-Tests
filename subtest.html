@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subjective Test — AI Evaluation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); max-width: 700px; width: 100%; padding: 36px 40px; }
+  h1 { font-size: 22px; color: #1a1f4c; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 28px; }
+  .question-block { margin-bottom: 28px; }
+  .q-label { font-size: 12px; font-weight: 700; color: #7c3aed; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .q-text { font-size: 15px; color: #1a1f4c; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
+  .q-marks { font-size: 11px; color: #9ca3af; margin-bottom: 10px; }
+  textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: 'Segoe UI', sans-serif; color: #1a1f4c; resize: vertical; min-height: 120px; outline: none; transition: border .2s; }
+  textarea:focus { border-color: #7c3aed; }
+  .submit-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: 'Segoe UI', sans-serif; transition: opacity .2s; }
+  .submit-btn:disabled { opacity: .6; cursor: not-allowed; }
+  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+
+  /* Results */
+  .results { display: none; }
+  .result-card { border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .result-q { font-size: 13px; font-weight: 700; color: #6b7280; margin-bottom: 8px; }
+  .result-answer { font-size: 13px; color: #374151; background: #f9fafb; padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; font-style: italic; }
+  .score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .score-badge { font-size: 22px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #7c3aed, #4f46e5); padding: 8px 18px; border-radius: 10px; }
+  .score-label { font-size: 13px; color: #6b7280; }
+  .feedback-section { margin-top: 10px; }
+  .feedback-row { font-size: 13px; color: #374151; margin-bottom: 6px; line-height: 1.5; }
+  .feedback-row span { font-weight: 700; }
+  .correct { color: #059669; }
+  .missing { color: #dc2626; }
+  .suggestion { color: #d97706; }
+  .loading { text-align: center; padding: 20px; color: #7c3aed; font-size: 14px; font-weight: 600; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #e5e7eb; border-top-color: #7c3aed; border-radius: 50%; animation: spin .8s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .total-score { text-align: center; background: linear-gradient(135deg, #f0f4ff, #e0e7ff); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+  .total-score .big { font-size: 48px; font-weight: 800; color: #4f46e5; }
+  .total-score .lbl { font-size: 14px; color: #6b7280; margin-top: 4px; }
+  .retake-btn { width: 100%; padding: 12px; background: #f3f4f6; color: #374151; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Segoe UI', sans-serif; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- EXAM FORM -->
+  <div id="examSection">
+    <h1>📝 Subjective Test</h1>
+    <p class="subtitle">Answer both questions carefully. AI will evaluate your responses.</p>
+
+    <div class="question-block">
+      <div class="q-label">Question 1</div>
+      <div class="q-text">Explain the WHO definition of health. What are its three dimensions? Give one example to support your answer.</div>
+      <div class="q-marks">5 Marks</div>
+      <textarea id="ans1" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <hr class="divider">
+
+    <div class="question-block">
+      <div class="q-label">Question 2</div>
+      <div class="q-text">What is a balanced diet? Name any four nutrients it must contain and explain what happens if any one of them is deficient in our body.</div>
+      <div class="q-marks">5 Marks</div>
+      <textarea id="ans2" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <button class="submit-btn" onclick="submitTest()" id="submitBtn">Submit & Get AI Evaluation</button>
+  </div>
+
+  <!-- RESULTS SECTION -->
+  <div id="resultsSection" class="results">
+    <h1>📊 Your Results</h1>
+    <p class="subtitle">Evaluated by Gemini AI</p>
+
+    <div class="total-score">
+      <div class="big" id="totalScore">—</div>
+      <div class="lbl">out of 10 marks</div>
+    </div>
+
+    <div id="resultCards"></div>
+
+    <button class="retake-btn" onclick="retake()">🔄 Retake Test</button>
+  </div>
+
+</div>
+
+<script>
+// ── QUESTIONS & MODEL ANSWERS (hidden from UI) ──
+var QUESTIONS = [
+  {
+    id: 1,
+    text: "Explain the WHO definition of health. What are its three dimensions? Give one example to support your answer.",
+    maxMarks: 5,
+    modelAnswer: "WHO defines health as 'a state of complete physical, mental and social well-being and not merely the absence of disease or infirmity.' The three dimensions are: (1) Physical health — the body functions normally, no disease; (2) Mental health — emotional stability, ability to think clearly and manage stress; (3) Social health — ability to interact well with others and contribute to society. Example: A person who is physically fit but suffers from depression is not fully healthy because mental health is affected."
+  },
+  {
+    id: 2,
+    text: "What is a balanced diet? Name any four nutrients it must contain and explain what happens if any one of them is deficient in our body.",
+    maxMarks: 5,
+    modelAnswer: "A balanced diet is one that contains all essential nutrients in the right proportions needed for growth, energy, and body repair. Four key nutrients: (1) Carbohydrates — provide energy; (2) Proteins — needed for growth and repair of tissues; (3) Vitamins — protect against disease; (4) Minerals — needed for bone strength and various body functions. Deficiency example: Lack of Vitamin C causes Scurvy — symptoms include bleeding gums, weakness, and slow wound healing."
+  }
+];
+
+var PROXY_URL = 'https://long-dew-a308.rajattiwari1340.workers.dev/';
+
+async function submitTest() {
+  var ans1 = document.getElementById('ans1').value.trim();
+  var ans2 = document.getElementById('ans2').value.trim();
+
+  if (!ans1 || !ans2) {
+    alert('Please answer both questions before submitting.');
+    return;
+  }
+
+  // Hide exam, show results loading
+  document.getElementById('examSection').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('resultCards').innerHTML =
+    '<div class="loading"><div class="spinner"></div> Gemini is evaluating your answers… please wait</div>';
+
+  var answers = [ans1, ans2];
+  var results = [];
+
+  for (var i = 0; i < QUESTIONS.length; i++) {
+    var q = QUESTIONS[i];
+    var result = await evaluateAnswer(q, answers[i]);
+    results.push(result);
+  }
+
+  showResults(results);
+}
+
+async function evaluateAnswer(q, studentAnswer) {
+  var prompt =
+    'You are a strict but fair Class 8 examiner.\n\n' +
+    'QUESTION: ' + q.text + '\n\n' +
+    'MODEL ANSWER: ' + q.modelAnswer + '\n\n' +
+    'STUDENT ANSWER: ' + studentAnswer + '\n\n' +
+    'MAX MARKS: ' + q.maxMarks + '\n\n' +
+    'Evaluate the student answer against the model answer.\n' +
+    'Reply ONLY with a raw JSON object — no markdown, no backticks:\n' +
+    '{\n' +
+    '  "score": <number 0-' + q.maxMarks + '>,\n' +
+    '  "correct": "<what the student got right>",\n' +
+    '  "missing": "<what was missing or wrong>",\n' +
+    '  "suggestion": "<one specific tip to improve>"\n' +
+    '}';
+
+  try {
+    var resp = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    });
+
+    if (!resp.ok) {
+      var err = await resp.json().catch(function(){ return {}; });
+      throw new Error('Server ' + resp.status + ': ' + (err.error || resp.statusText));
+    }
+
+    var data = await resp.json();
+    var raw = (data.text || '').trim();
+
+    // Strip markdown fences if any
+    raw = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // Extract JSON object
+    raw = raw.replace(/^[\s\S]*?(\{)/, '$1').replace(/(\})[\s\S]*$/, '$1');
+
+    var parsed = JSON.parse(raw);
+    return {
+      q: q,
+      answer: studentAnswer,
+      score: parsed.score || 0,
+      correct: parsed.correct || '—',
+      missing: parsed.missing || '—',
+      suggestion: parsed.suggestion || '—',
+      error: null
+    };
+
+  } catch (e) {
+    return {
+      q: q,
+      answer: studentAnswer,
+      score: 0,
+      correct: '—',
+      missing: '—',
+      suggestion: '—',
+      error: e.message
+    };
+  }
+}
+
+function showResults(results) {
+  var total = results.reduce(function(sum, r){ return sum + r.score; }, 0);
+  var maxTotal = QUESTIONS.reduce(function(sum, q){ return sum + q.maxMarks; }, 0);
+
+  document.getElementById('totalScore').textContent = total + ' / ' + maxTotal;
+
+  var html = '';
+  results.forEach(function(r, idx) {
+    if (r.error) {
+      html += '<div class="result-card">' +
+        '<div class="result-q">Question ' + (idx+1) + '</div>' +
+        '<div style="color:#dc2626;font-size:13px;">⚠️ Evaluation failed: ' + r.error + '</div>' +
+        '</div>';
+      return;
+    }
+    html +=
+      '<div class="result-card">' +
+        '<div class="result-q">Question ' + (idx+1) + ' — ' + r.q.maxMarks + ' Marks</div>' +
+        '<div class="result-answer">"' + r.answer.substring(0, 200) + (r.answer.length > 200 ? '…' : '') + '"</div>' +
+        '<div class="score-row">' +
+          '<div class="score-badge">' + r.score + ' / ' + r.q.maxMarks + '</div>' +
+          '<div class="score-label">Marks awarded by Gemini AI</div>' +
+        '</div>' +
+        '<div class="feedback-section">' +
+          '<div class="feedback-row correct">✅ <span>Correct:</span> ' + r.correct + '</div>' +
+          '<div class="feedback-row missing">❌ <span>Missing:</span> ' + r.missing + '</div>' +
+          '<div class="feedback-row suggestion">💡 <span>Tip:</span> ' + r.suggestion + '</div>' +
+        '</div>' +
+      '</div>';
+  });
+
+  document.getElementById('resultCards').innerHTML = html;
+}
+
+function retake() {
+  document.getElementById('ans1').value = '';
+  document.getElementById('ans2').value = '';
+  document.getElementById('examSection').style.display = 'block';
+  document.getElementById('resultsSection').style.display = 'none';
+}
+</script>
+</body>
+</html>
