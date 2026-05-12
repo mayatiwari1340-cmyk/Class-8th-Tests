@@ -1650,7 +1650,7 @@ async function rateOneSub(r, qr, tm){
     return;
   }
 
-  card.innerHTML='<div class="aiLoading"><div class="aiSpinner"></div>🤖 AI is rating your answer… please wait</div>';
+  card.innerHTML='<div class="aiLoading"><div class="aiSpinner"></div>🤖 GPT-4o is rating your answer… please wait</div>';
 
   var rubricDesc=q.rubric.map(function(rub,i){return (i+1)+'. '+rub.param+' [max '+rub.max+' marks] — '+rub.hint;}).join('\n');
   var prompt=
@@ -1667,25 +1667,28 @@ async function rateOneSub(r, qr, tm){
     '{"params":[{"param":"EXACT PARAM NAME","score":X,"max":Y},...], "feedback":"your feedback here", "totalScore":Z, "maxScore":'+q.m+'}';
 
   try{
-    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+    var resp=await fetch('https://api.openai.com/v1/chat/completions',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
+        'Authorization':'Bearer '+getOpenAIKey()
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'gpt-4o',
         max_tokens:800,
-        messages:[{role:'user',content:prompt}]
+        temperature:0.2,
+        messages:[
+          {role:'system',content:'You are a strict but fair Class 8 examiner. Always reply with raw JSON only — no markdown, no backticks, no preamble.'},
+          {role:'user',content:prompt}
+        ]
       })
     });
     if(!resp.ok){
       var errData=await resp.json().catch(function(){return {};});
-      throw new Error('API '+resp.status+': '+(errData.error&&errData.error.message||resp.statusText));
+      throw new Error('OpenAI '+resp.status+': '+(errData.error&&errData.error.message||resp.statusText));
     }
     var data=await resp.json();
-    var raw=(data.content&&data.content[0]&&data.content[0].text)||'';
+    var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
     // Strip any markdown fences
     raw=raw.replace(/```json[\s\S]*?```/g,function(m){return m.replace(/```json\n?/,'').replace(/\n?```/,'');});
     raw=raw.replace(/```[\s\S]*?```/g,function(m){return m.replace(/```\n?/g,'');});
@@ -1708,7 +1711,7 @@ async function rateOneSub(r, qr, tm){
     console.error('Sub rating error Q'+qIdx+':',e.message);
     var isAuth=e.message.indexOf('401')!==-1||e.message.toLowerCase().indexOf('auth')!==-1||e.message.toLowerCase().indexOf('key')!==-1;
     card.innerHTML='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;color:#991b1b;font-size:12px;">'+
-      '<strong>⚠️ AI Rating Error</strong><br>'+e.message+'<br>'+
+      '<strong>⚠️ GPT-4o Rating Error</strong><br>'+e.message+'<br>'+
       '<button onclick="rateOneSub(results['+qIdx+'],results,\'\')" style="margin-top:8px;padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:Nunito,sans-serif;">🔄 Retry</button>'+
     '</div>';
   }
@@ -1716,7 +1719,7 @@ async function rateOneSub(r, qr, tm){
 
 function renderSubRating(card,rating){
   var html='<div class="aiRatingWrap">'+
-    '<div class="aiRatingHdr">🤖 AI Rating</div>';
+    '<div class="aiRatingHdr">🤖 GPT-4o Rating</div>';
   rating.params.forEach(function(p){
     var pct=p.max>0?Math.round(p.score/p.max*100):0;
     html+='<div class="aiScoreRow">'+
@@ -2073,7 +2076,9 @@ window.copyMailBody=function(){
 };
 
 
-// ══ ANTHROPIC API (key injected automatically over HTTPS) ══
+// ══ OPENAI KEY (hardcoded) ══
+var _oaiKey = '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';
+function getOpenAIKey(){ return _oaiKey; }
 
 // ══ YOUTUBE LINKS VIA OPENAI ══
 var ytCache = {};
@@ -2113,27 +2118,30 @@ async function fetchLinksForQuestion(qIndex, topic, questionText, solution) {
     '[{"title":"exact video title","channel":"channel name","url":"https://www.youtube.com/watch?v=REAL_ID"}]';
 
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Authorization': 'Bearer '+getOpenAIKey()
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'gpt-4o',
         max_tokens: 600,
-        messages: [{ role: 'user', content: prompt }]
+        temperature: 0.3,
+        messages: [
+          {role:'system', content:'You are a CBSE Class 8 teacher. Always reply with raw JSON only — no markdown, no backticks.'},
+          {role:'user', content: prompt}
+        ]
       })
     });
 
     if (!resp.ok) {
       var errData = await resp.json().catch(function(){return {};});
-      throw new Error('API ' + resp.status + ': ' + (errData.error && errData.error.message || resp.statusText));
+      throw new Error('OpenAI ' + resp.status + ': ' + (errData.error && errData.error.message || resp.statusText));
     }
 
     var data = await resp.json();
-    var raw = (data.content && data.content[0] && data.content[0].text) || '';
+    var raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
     raw = raw.replace(/^[\s\S]*?(\[)/,'$1').replace(/(\])[\s\S]*$/,'$1').trim();
     var links = JSON.parse(raw);
     if (!Array.isArray(links) || !links.length) throw new Error('Empty');
