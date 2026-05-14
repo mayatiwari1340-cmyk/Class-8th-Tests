@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio Evaluation Test</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .card { background: #1e293b; border-radius: 20px; max-width: 680px; width: 100%; padding: 40px; box-shadow: 0 25px 60px rgba(0,0,0,.5); }
+  h1 { color: #f1f5f9; font-size: 24px; margin-bottom: 6px; }
+  .subtitle { color: #94a3b8; font-size: 13px; margin-bottom: 32px; }
+  .passage-box { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px 24px; margin-bottom: 28px; }
+  .passage-label { font-size: 11px; font-weight: 700; color: #7c3aed; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+  .passage-text { color: #e2e8f0; font-size: 16px; line-height: 1.8; }
+
+  /* Timer */
+  .timer-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .timer { font-size: 42px; font-weight: 800; color: #22c55e; font-family: monospace; transition: color .3s; }
+  .timer.orange { color: #f97316; }
+  .timer.red { color: #ef4444; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .phase-badge { background: #7c3aed; color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+
+  /* Mic button */
+  .mic-area { text-align: center; margin-bottom: 24px; }
+  .mic-btn { width: 90px; height: 90px; border-radius: 50%; border: none; cursor: pointer; font-size: 36px; transition: all .2s; background: #1e293b; border: 3px solid #475569; }
+  .mic-btn.idle { color: #475569; }
+  .mic-btn.preview { background: #1e3a5f; border-color: #3b82f6; color: #3b82f6; }
+  .mic-btn.recording { background: #450a0a; border-color: #ef4444; color: #ef4444; animation: micpulse 1.5s infinite; }
+  @keyframes micpulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)} 50%{box-shadow:0 0 0 20px rgba(239,68,68,0)} }
+  .mic-btn.done { background: #052e16; border-color: #22c55e; color: #22c55e; }
+  .phase-label { margin-top: 10px; color: #94a3b8; font-size: 13px; font-weight: 600; }
+
+  /* Transcript */
+  .transcript-box { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 16px; min-height: 80px; margin-bottom: 20px; }
+  .transcript-label { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+  .transcript-text { color: #cbd5e1; font-size: 14px; line-height: 1.6; min-height: 40px; }
+  .interim { color: #64748b; font-style: italic; }
+
+  /* Submit */
+  .submit-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Segoe UI', sans-serif; display: none; }
+  .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Status */
+  .status { text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 16px; min-height: 20px; }
+
+  /* Result */
+  .result-box { display: none; background: #0f172a; border: 1px solid #334155; border-radius: 14px; padding: 24px; }
+  .result-box h2 { color: #f1f5f9; font-size: 18px; margin-bottom: 16px; }
+  .score-big { font-size: 56px; font-weight: 900; color: #22c55e; text-align: center; margin: 10px 0; }
+  .score-sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 20px; }
+  .feedback-item { margin-bottom: 12px; padding: 12px 16px; background: #1e293b; border-radius: 8px; }
+  .feedback-item .fb-label { font-size: 11px; font-weight: 700; color: #7c3aed; text-transform: uppercase; margin-bottom: 4px; }
+  .feedback-item .fb-text { color: #cbd5e1; font-size: 13px; line-height: 1.5; }
+  .loading-eval { text-align: center; padding: 30px; color: #7c3aed; font-size: 14px; font-weight: 600; }
+  .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #1e293b; border-top-color: #7c3aed; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .retry-btn { width: 100%; padding: 12px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px; font-family: 'Segoe UI', sans-serif; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🎙️ Reading Aloud — Test</h1>
+  <p class="subtitle">Read the passage aloud. Gemini will evaluate your pronunciation, fluency, and accuracy.</p>
+
+  <div class="passage-box">
+    <div class="passage-label">📖 Read this passage aloud</div>
+    <div class="passage-text" id="passageText">
+      The water cycle, also known as the hydrological cycle, describes the continuous movement of water on, above, and below the surface of the Earth. Water evaporates from oceans and lakes, rises into the atmosphere, forms clouds through condensation, and falls back to the ground as precipitation. This process is essential for distributing fresh water across the planet and sustaining all forms of life.
+    </div>
+  </div>
+
+  <div class="timer-row">
+    <div class="timer" id="timer">0:15</div>
+    <div class="phase-badge" id="phaseBadge">👁️ Preview</div>
+  </div>
+
+  <div class="mic-area">
+    <button class="mic-btn idle" id="micBtn">🎙️</button>
+    <div class="phase-label" id="phaseLabel">Previewing passage… recording starts in 15s</div>
+  </div>
+
+  <div class="transcript-box">
+    <div class="transcript-label">📝 Live Transcript</div>
+    <div class="transcript-text" id="transcriptText"><span style="color:#475569">Transcript will appear here as you speak…</span></div>
+  </div>
+
+  <div class="status" id="status"></div>
+  <button class="submit-btn" id="submitBtn" onclick="submitForEvaluation()">🤖 Submit for Gemini Evaluation</button>
+
+  <div class="result-box" id="resultBox"></div>
+</div>
+
+<script>
+var PROXY_URL = 'https://long-dew-a308.rajattiwari1340.workers.dev/';
+var PASSAGE = document.getElementById('passageText').innerText.trim();
+
+// ── STATE ──
+var phase = 'preview'; // preview → recording → done
+var timerEl = document.getElementById('timer');
+var phaseBadge = document.getElementById('phaseBadge');
+var phaseLabel = document.getElementById('phaseLabel');
+var micBtn = document.getElementById('micBtn');
+var transcriptEl = document.getElementById('transcriptText');
+var statusEl = document.getElementById('status');
+var submitBtn = document.getElementById('submitBtn');
+
+var finalTranscript = '';
+var interimTranscript = '';
+var mediaRecorder = null;
+var audioChunks = [];
+var audioBlob = null;
+var recognition = null;
+var timerInterval = null;
+var secondsLeft = 15;
+
+// ── START PREVIEW PHASE ──
+startPreview();
+
+function startPreview() {
+  phase = 'preview';
+  secondsLeft = 15;
+  micBtn.className = 'mic-btn preview';
+  micBtn.textContent = '👁️';
+  phaseBadge.textContent = '👁️ Preview';
+  phaseBadge.style.background = '#1d4ed8';
+  phaseLabel.textContent = 'Read the passage silently. Recording starts in 15s…';
+  updateTimer();
+  timerInterval = setInterval(function() {
+    secondsLeft--;
+    updateTimer();
+    if (secondsLeft <= 0) {
+      clearInterval(timerInterval);
+      startRecording();
+    }
+  }, 1000);
+}
+
+function startRecording() {
+  phase = 'recording';
+  secondsLeft = 120; // 2 minutes
+  micBtn.className = 'mic-btn recording';
+  micBtn.textContent = '🎙️';
+  phaseBadge.textContent = '🔴 Recording';
+  phaseBadge.style.background = '#dc2626';
+  phaseLabel.textContent = 'Read the passage aloud clearly…';
+  transcriptEl.innerHTML = '<span class="interim">Listening…</span>';
+  updateTimer();
+
+  // ── Start audio recording ──
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    // MediaRecorder for audio file
+    var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+    audioChunks = [];
+    mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = function() {
+      audioBlob = new Blob(audioChunks, { type: mimeType });
+      statusEl.textContent = '✅ Recording saved (' + (audioBlob.size / 1024).toFixed(1) + ' KB)';
+      submitBtn.style.display = 'block';
+    };
+    mediaRecorder.start(250); // collect chunks every 250ms
+
+    // ── Web Speech API for live transcript ──
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SR();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-IN';
+      finalTranscript = '';
+
+      recognition.onresult = function(event) {
+        interimTranscript = '';
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        transcriptEl.innerHTML = finalTranscript + '<span class="interim">' + interimTranscript + '</span>';
+      };
+      recognition.onerror = function(e) { statusEl.textContent = '⚠️ Speech recognition error: ' + e.error; };
+      recognition.start();
+    } else {
+      statusEl.textContent = '⚠️ Speech recognition not supported — audio will still be recorded.';
+    }
+
+    // Timer countdown
+    timerInterval = setInterval(function() {
+      secondsLeft--;
+      updateTimer();
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        stopRecording();
+      }
+    }, 1000);
+
+  }).catch(function(err) {
+    statusEl.textContent = '❌ Microphone access denied: ' + err.message;
+    phaseLabel.textContent = 'Please allow microphone access and reload.';
+  });
+}
+
+function stopRecording() {
+  phase = 'done';
+  micBtn.className = 'mic-btn done';
+  micBtn.textContent = '✅';
+  phaseBadge.textContent = '✅ Done';
+  phaseBadge.style.background = '#15803d';
+  phaseLabel.textContent = 'Recording complete!';
+  timerEl.textContent = '0:00';
+  timerEl.className = 'timer';
+
+  if (recognition) { try { recognition.stop(); } catch(e){} }
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  // Stop all mic tracks
+  if (mediaRecorder && mediaRecorder.stream) {
+    mediaRecorder.stream.getTracks().forEach(function(t){ t.stop(); });
+  }
+}
+
+function updateTimer() {
+  var m = Math.floor(secondsLeft / 60);
+  var s = secondsLeft % 60;
+  timerEl.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+  if (phase === 'recording') {
+    if (secondsLeft <= 30) { timerEl.className = 'timer red'; }
+    else if (secondsLeft <= 60) { timerEl.className = 'timer orange'; }
+    else { timerEl.className = 'timer'; timerEl.style.color = '#22c55e'; }
+  }
+}
+
+// ── SUBMIT FOR EVALUATION ──
+async function submitForEvaluation() {
+  submitBtn.disabled = true;
+  document.getElementById('resultBox').style.display = 'block';
+  document.getElementById('resultBox').innerHTML = '<div class="loading-eval"><div class="spinner"></div>Gemini is listening and evaluating… please wait</div>';
+
+  try {
+    // Convert audio blob to base64
+    var base64Audio = await blobToBase64(audioBlob);
+    var audioData = base64Audio.split(',')[1]; // remove data:...;base64, prefix
+    var mimeType = audioBlob.type.split(';')[0]; // e.g. audio/webm
+
+    var prompt = 'You are a strict but encouraging English examiner for a Class 8 student in India.\n\n' +
+      'The student was asked to read the following passage aloud:\n\n' +
+      '"""\n' + PASSAGE + '\n"""\n\n' +
+      'Their live transcript was:\n"""\n' + (finalTranscript || '[transcript unavailable]') + '\n"""\n\n' +
+      'Listen to the audio recording carefully and evaluate the student on these 4 parameters. ' +
+      'Reply ONLY with raw JSON — no markdown, no backticks:\n' +
+      '{\n' +
+      '  "pronunciation": { "score": 0-3, "feedback": "..." },\n' +
+      '  "fluency": { "score": 0-3, "feedback": "..." },\n' +
+      '  "accuracy": { "score": 0-2, "feedback": "..." },\n' +
+      '  "expression": { "score": 0-2, "feedback": "..." },\n' +
+      '  "total": 0-10,\n' +
+      '  "overall": "One sentence overall comment"\n' +
+      '}';
+
+    var resp = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: prompt,
+        audio: audioData,
+        mimeType: mimeType
+      })
+    });
+
+    if (!resp.ok) {
+      var err = await resp.json().catch(function(){ return {}; });
+      throw new Error('Server ' + resp.status + ': ' + (err.error || resp.statusText));
+    }
+
+    var data = await resp.json();
+    var raw = (data.text || '').trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    raw = raw.replace(/^[\s\S]*?(\{)/, '$1').replace(/(\})[\s\S]*$/, '$1');
+    var result = JSON.parse(raw);
+    showResult(result);
+
+  } catch(e) {
+    document.getElementById('resultBox').innerHTML =
+      '<div style="color:#ef4444;font-size:13px;padding:10px;">⚠️ Error: ' + e.message + '</div>' +
+      '<button class="retry-btn" onclick="submitForEvaluation()">🔄 Retry</button>';
+    submitBtn.disabled = false;
+  }
+}
+
+function showResult(r) {
+  var params = [
+    { key: 'pronunciation', label: '🗣️ Pronunciation', max: 3 },
+    { key: 'fluency', label: '🌊 Fluency & Pace', max: 3 },
+    { key: 'accuracy', label: '✅ Accuracy', max: 2 },
+    { key: 'expression', label: '🎭 Expression & Confidence', max: 2 },
+  ];
+  var html = '<h2>🤖 Gemini Evaluation</h2>';
+  html += '<div class="score-big">' + r.total + ' / 10</div>';
+  html += '<div class="score-sub">' + (r.overall || '') + '</div>';
+  params.forEach(function(p) {
+    var item = r[p.key] || {};
+    html += '<div class="feedback-item">' +
+      '<div class="fb-label">' + p.label + ' — ' + (item.score || 0) + '/' + p.max + '</div>' +
+      '<div class="fb-text">' + (item.feedback || '—') + '</div>' +
+      '</div>';
+  });
+  html += '<button class="retry-btn" onclick="location.reload()">🔄 Try Again</button>';
+  document.getElementById('resultBox').innerHTML = html;
+}
+
+function blobToBase64(blob) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onloadend = function() { resolve(reader.result); };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+</script>
+</body>
+</html>
